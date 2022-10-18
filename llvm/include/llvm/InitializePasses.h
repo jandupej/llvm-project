@@ -332,7 +332,7 @@ void initializePatchableFunctionPass(PassRegistry&);
 void initializePeepholeOptimizerPass(PassRegistry&);
 void initializePhiValuesWrapperPassPass(PassRegistry&);
 void initializePhysicalRegisterUsageInfoPass(PassRegistry&);
-void initializePlaceBackedgeSafepointsImplPass(PassRegistry&);
+void initializePlaceBackedgeSafepointsLegacyPassPass(PassRegistry&);
 void initializePlaceSafepointsLegacyPassPass(PassRegistry&);
 void initializePostDomOnlyPrinterWrapperPassPass(PassRegistry &);
 void initializePostDomOnlyViewerWrapperPassPass(PassRegistry &);

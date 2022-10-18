@@ -100,7 +100,6 @@ static cl::opt<bool> SplitBackedge("spp-split-backedge", cl::Hidden,
 
 #pragma region Backedge Safepoints Pass (legacy only)
 namespace {
-
 /// An analysis pass whose purpose is to identify each of the backedges in
 /// the function which require a safepoint poll to be inserted.
 class PlaceBackedgeSafepointsLegacyPass : public FunctionPass {
@@ -117,7 +116,7 @@ public:
 
   PlaceBackedgeSafepointsLegacyPass(bool CallSafepoints = false)
       : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints) {
-    initializePlaceBackedgeSafepointsImplPass(*PassRegistry::getPassRegistry());
+    initializePlaceBackedgeSafepointsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnLoop(Loop *);
@@ -165,15 +164,36 @@ static cl::opt<bool> NoBackedge("spp-no-backedge", cl::Hidden, cl::init(false));
 
 char PlaceBackedgeSafepointsLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(PlaceBackedgeSafepointsImpl,
+INITIALIZE_PASS_BEGIN(PlaceBackedgeSafepointsLegacyPass,
                       "place-backedge-safepoints-impl",
                       "Place Backedge Safepoints", false, false)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(PlaceBackedgeSafepointsImpl,
+INITIALIZE_PASS_END(PlaceBackedgeSafepointsLegacyPass,
                     "place-backedge-safepoints-impl",
                     "Place Backedge Safepoints", false, false)
+
+static bool containsUnconditionalCallSafepoint(Loop *L, BasicBlock *Header,
+                                               BasicBlock *Pred,
+                                               DominatorTree &DT,
+                                               const TargetLibraryInfo &TLI);
+
+static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
+                                    BasicBlock *Pred);
+
+static Instruction *findLocationForEntrySafepoint(Function &F,
+                                                  DominatorTree &DT);
+
+static bool isGCSafepointPoll(Function &F);
+static bool shouldRewriteFunction(Function &F);
+static bool enableEntrySafepoints(Function &F);
+static bool enableBackedgeSafepoints(Function &F);
+static bool enableCallSafepoints(Function &F);
+
+static void InsertSafepointPoll(Instruction *InsertBefore,
+                    std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
+                    const TargetLibraryInfo &TLI);
 
 bool PlaceBackedgeSafepointsLegacyPass::runOnLoop(Loop *L) {
   // Loop through all loop latches (branches controlling backedges).  We need
@@ -431,17 +451,6 @@ PreservedAnalyses PlaceSafepointsPass::run(Function &F,
 
 #pragma endregion
 
-
-
-
-// Insert a safepoint poll immediately before the given instruction.  Does
-// not handle the parsability of state at the runtime call, that's the
-// callers job.
-static void
-InsertSafepointPoll(Instruction *InsertBefore,
-                    std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
-                    const TargetLibraryInfo &TLI);
-
 static bool needsStatepoint(CallBase *Call, const TargetLibraryInfo &TLI) {
   if (callsGCLeafFunction(Call, TLI))
     return false;
@@ -673,11 +682,10 @@ static bool enableEntrySafepoints(Function &F) { return !NoEntry; }
 static bool enableBackedgeSafepoints(Function &F) { return !NoBackedge; }
 static bool enableCallSafepoints(Function &F) { return !NoCall; }
 
-
-
-
-static void
-InsertSafepointPoll(Instruction *InsertBefore,
+// Insert a safepoint poll immediately before the given instruction.  Does
+// not handle the parsability of state at the runtime call, that's the
+// callers job.
+static void InsertSafepointPoll(Instruction *InsertBefore,
                     std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
                     const TargetLibraryInfo &TLI) {
   BasicBlock *OrigBB = InsertBefore->getParent();

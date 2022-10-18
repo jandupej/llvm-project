@@ -54,9 +54,11 @@
 
 namespace llvm {
 
+class TargetLibraryInfo;
+
 namespace safepoints {
 
-};
+}
 
 class PlaceSafepointsPass : public PassInfoMixin<PlaceSafepointsPass> {
 public:
