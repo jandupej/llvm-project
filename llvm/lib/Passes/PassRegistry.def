@@ -393,6 +393,7 @@ FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
+FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
