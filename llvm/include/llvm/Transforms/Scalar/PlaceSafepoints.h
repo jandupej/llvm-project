@@ -56,21 +56,18 @@ namespace llvm {
 
 class TargetLibraryInfo;
 
-namespace safepoints {
-
-}
+namespace safepoints {}
 
 class PlaceSafepointsPass : public PassInfoMixin<PlaceSafepointsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  bool runImpl(Function &F, const TargetLibraryInfo& TLI);
+  bool runImpl(Function &F, const TargetLibraryInfo &TLI);
 
-  void cleanup() {
-  }
+  void cleanup() {}
 
 private:
 };
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_PLACESAFEPOINTS_H

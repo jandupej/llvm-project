@@ -98,7 +98,7 @@ static cl::opt<int> CountedLoopTripWidth("spp-counted-loop-trip-width",
 static cl::opt<bool> SplitBackedge("spp-split-backedge", cl::Hidden,
                                    cl::init(false));
 
-#pragma region Backedge Safepoints Pass (legacy only)
+#pragma region Backedge Safepoints Pass(legacy only)
 namespace {
 /// An analysis pass whose purpose is to identify each of the backedges in
 /// the function which require a safepoint poll to be inserted.
@@ -116,7 +116,8 @@ public:
 
   PlaceBackedgeSafepointsLegacyPass(bool CallSafepoints = false)
       : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints) {
-    initializePlaceBackedgeSafepointsLegacyPassPass(*PassRegistry::getPassRegistry());
+    initializePlaceBackedgeSafepointsLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   bool runOnLoop(Loop *);
@@ -154,9 +155,8 @@ private:
   DominatorTree *DT = nullptr;
   LoopInfo *LI = nullptr;
   TargetLibraryInfo *TLI = nullptr;
-
 };
-}
+} // namespace
 
 static cl::opt<bool> NoEntry("spp-no-entry", cl::Hidden, cl::init(false));
 static cl::opt<bool> NoCall("spp-no-call", cl::Hidden, cl::init(false));
@@ -191,7 +191,8 @@ static bool enableEntrySafepoints(Function &F);
 static bool enableBackedgeSafepoints(Function &F);
 static bool enableCallSafepoints(Function &F);
 
-static void InsertSafepointPoll(Instruction *InsertBefore,
+static void
+InsertSafepointPoll(Instruction *InsertBefore,
                     std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
                     const TargetLibraryInfo &TLI);
 
@@ -202,7 +203,7 @@ bool PlaceBackedgeSafepointsLegacyPass::runOnLoop(Loop *L) {
   // having run sometime earlier in the pipeline, but this code must be correct
   // w.r.t. loops with multiple backedges.
   BasicBlock *Header = L->getHeader();
-  SmallVector<BasicBlock*, 16> LoopLatches;
+  SmallVector<BasicBlock *, 16> LoopLatches;
   L->getLoopLatches(LoopLatches);
   for (BasicBlock *Pred : LoopLatches) {
     assert(L->contains(Pred));
@@ -248,7 +249,7 @@ bool PlaceBackedgeSafepointsLegacyPass::runOnLoop(Loop *L) {
 }
 #pragma endregion
 
-#pragma region Safepoints Pass (with legacy wrapper)
+#pragma region Safepoints Pass(with legacy wrapper)
 namespace {
 class PlaceSafepointsLegacyPass : public FunctionPass {
 public:
@@ -276,25 +277,25 @@ private:
 
 char PlaceSafepointsLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(PlaceSafepointsLegacyPass, "place-safepoints", "Place Safepoints",
-                      false, false)
+INITIALIZE_PASS_BEGIN(PlaceSafepointsLegacyPass, "place-safepoints",
+                      "Place Safepoints", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(PlaceSafepointsLegacyPass, "place-safepoints", "Place Safepoints",
-                    false, false)
+INITIALIZE_PASS_END(PlaceSafepointsLegacyPass, "place-safepoints",
+                    "Place Safepoints", false, false)
 
 FunctionPass *llvm::createPlaceSafepointsPass() {
   return new PlaceSafepointsLegacyPass();
-};
+}
 
 bool PlaceSafepointsLegacyPass::runOnFunction(Function &F) {
-   if (skipFunction(F))
+  if (skipFunction(F))
     return false;
 
   LLVM_DEBUG(dbgs() << "********** Begin Safepoint Placement **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << F.getName() << '\n');
 
-  bool MadeChange = Impl.runImpl(F, 
-    getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
+  bool MadeChange =
+      Impl.runImpl(F, getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
 
   if (MadeChange) {
     LLVM_DEBUG(dbgs() << "********** Function after Safepoint Placement: "
@@ -306,8 +307,7 @@ bool PlaceSafepointsLegacyPass::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-
-bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo& TLI) {
+bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (F.isDeclaration() || F.empty()) {
     // This is a declaration, nothing to do.  Must exit early to avoid crash in
     // dom tree calculation
@@ -369,8 +369,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo& TLI) {
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems
     // wrong, but it does happen for the split-backedge.ll test case.
-    PollLocations.erase(std::unique(PollLocations.begin(),
-                                    PollLocations.end()),
+    PollLocations.erase(std::unique(PollLocations.begin(), PollLocations.end()),
                         PollLocations.end());
 
     // Insert a poll at each point the analysis pass identified
@@ -437,7 +436,6 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo& TLI) {
   return Modified;
 }
 
-
 PreservedAnalyses PlaceSafepointsPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -446,7 +444,7 @@ PreservedAnalyses PlaceSafepointsPass::run(Function &F,
     return PreservedAnalyses::all();
 
   // TODO: can we preserve more?
-  return PreservedAnalyses::none();                                     
+  return PreservedAnalyses::none();
 }
 
 #pragma endregion
@@ -575,8 +573,6 @@ static void scanInlinedCode(Instruction *Start, Instruction *End,
   }
 }
 
-
-
 /// Returns true if an entry safepoint is not required before this callsite in
 /// the caller function.
 static bool doesNotRequireEntrySafepointBefore(CallBase *Call) {
@@ -685,7 +681,8 @@ static bool enableCallSafepoints(Function &F) { return !NoCall; }
 // Insert a safepoint poll immediately before the given instruction.  Does
 // not handle the parsability of state at the runtime call, that's the
 // callers job.
-static void InsertSafepointPoll(Instruction *InsertBefore,
+static void
+InsertSafepointPoll(Instruction *InsertBefore,
                     std::vector<CallBase *> &ParsePointsNeeded /*rval*/,
                     const TargetLibraryInfo &TLI) {
   BasicBlock *OrigBB = InsertBefore->getParent();
