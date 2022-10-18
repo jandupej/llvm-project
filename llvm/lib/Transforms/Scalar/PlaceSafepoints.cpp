@@ -285,7 +285,7 @@ INITIALIZE_PASS_END(PlaceSafepointsLegacyPass, "place-safepoints",
 
 FunctionPass *llvm::createPlaceSafepointsPass() {
   return new PlaceSafepointsLegacyPass();
-}s
+}
 
 bool PlaceSafepointsLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
